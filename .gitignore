@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+Depth_map/*
+50.zip
 
 # C extensions
 *.so
