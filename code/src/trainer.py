@@ -31,7 +31,7 @@ class Trainer:
         self.scheduler = scheduler
         self.dev = dev
         self.print_freq = 100  # Update print frequency
-        self.save_freq = 10
+        self.save_freq = 20
         self.exp_dir = exp_dir
         self.num_train_epochs = n_epochs
         self.logger = logger
@@ -114,6 +114,9 @@ class Trainer:
 
         loss = float('inf')
         epoch_start = 0
+        best_model_state = {}
+        best_loss = float('inf')
+        best_epoch = -1
         if pt_file != '':
             checkpoint = torch.load(pt_file)
             self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -135,12 +138,13 @@ class Trainer:
                     loss = loss_tot
                     best_loss = loss
                     best_model_state = copy.deepcopy(self.model.state_dict())
-                    if not os.path.exists(os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt")):
-                        torch.save({
-                            'epoch': e,
-                            'model_state_dict': best_model_state,
-                            'optimizer_state_dict': self.opt.state_dict(),
-                            }, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
+                    best_epoch = e
+                    # if not os.path.exists(os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt")):
+                    #     torch.save({
+                    #         'epoch': e,
+                    #         'model_state_dict': best_model_state,
+                    #         'optimizer_state_dict': self.opt.state_dict(),
+                    #         }, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
 
             if (e % self.save_freq) == 0:
                 torch.save(
@@ -153,11 +157,9 @@ class Trainer:
                 )
 
         torch.save({
-                'epoch': e,
-                'model_state_dict': self.model.state_dict(),
-                'optimizer_state_dict': self.opt.state_dict(),
+                'model_state_dict': best_model_state,
             }
-            , os.path.join(self.exp_dir, f"model_last.pt")
+            , os.path.join(self.exp_dir, f"bestmodel_{best_epoch:04d}_{best_loss:.10f}.pt")
         )
 
 
