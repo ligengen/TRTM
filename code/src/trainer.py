@@ -110,10 +110,17 @@ class Trainer:
             batch[k] = v.to(self.dev)
 
 
-    def train_model(self):
+    def train_model(self, pt_file=''):
 
         loss = float('inf')
-        for e in range(self.num_train_epochs):
+        epoch_start = 0
+        if pt_file != '':
+            checkpoint = torch.load(pt_file)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.opt.load_state_dict(checkpoint['optimizer_state_dict'])
+            epoch_start = checkpoint['epoch']
+            print('>>>>>>>>>>>>>>> load state dict successfully <<<<<<<<<<<<<<<')
+        for e in range(epoch_start, self.num_train_epochs):
             self.logger.info(f"\nEpoch: {e+1:04d}/{self.num_train_epochs:04d}")
             # Train one epoch
             self.model.train()
@@ -128,6 +135,12 @@ class Trainer:
                     loss = loss_tot
                     best_loss = loss
                     best_model_state = copy.deepcopy(self.model.state_dict())
+                    if not os.path.exists(os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt")):
+                        torch.save({
+                            'epoch': e,
+                            'model_state_dict': best_model_state,
+                            'optimizer_state_dict': self.opt.state_dict(),
+                            }, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
 
             if (e % self.save_freq) == 0:
                 torch.save(
@@ -136,14 +149,8 @@ class Trainer:
                         'model_state_dict': self.model.state_dict(),
                         'optimizer_state_dict': self.opt.state_dict(),
                     },
-                    os.path.join(self.exp_dir, f"model_{e:04d}_{loss:.10f}.pt"),
+                    os.path.join(self.exp_dir, f"model_{e:04d}_{loss_tot:.10f}.pt"),
                 )
-            if not os.path.exists(os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt")):
-                torch.save({
-                        'epoch': e,
-                        'model_state_dict': best_model_state,
-                        'optimizer_state_dict': self.opt.state_dict(),
-                        }, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
 
         torch.save({
                 'epoch': e,

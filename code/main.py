@@ -43,7 +43,7 @@ parser.add_argument(
     "--phase", help="train/test", type=str, default="train"
 )
 parser.add_argument(
-    "--pt_file", type=str, default=None
+    "--pt_file", type=str, default='/local/home/shaoliu/workspace/cloth_recon/experiments/exp_627806/model_0020_0.0208671260.pt'
 )
 args = parser.parse_args()
 
@@ -145,6 +145,6 @@ trainer = Trainer(
     args.n_epochs
 )
 if args.phase == 'train':
-    trainer.train_model()
+    trainer.train_model(pt_file)
     # pt_file = os.path.join(exp_dir, 'model_last.pt')
     # trainer.test_model(pt_file)
