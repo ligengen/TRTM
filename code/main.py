@@ -18,9 +18,9 @@ from src.utils.utils import add_logging
 
 main_seed = 0
 set_seed(main_seed)  # Seed main thread
-num_threads = 8
-data_dir = '/Users/ligen/Desktop/cloth_recon/Depth_map/50'
-save_dir = '/Users/ligen/Desktop/cloth_recon/experiments'
+num_threads = 1
+data_dir = '/media/shaoliu/data/ligengen'
+save_dir = '/local/home/shaoliu/workspace/cloth_recon/experiments'
 ######## Set-up experimental directories
 if not os.path.isdir(save_dir):
     os.mkdir(save_dir)
@@ -34,13 +34,13 @@ parser.add_argument(
     "--n_epochs", help="Number of training epochs", type=int, default=300
 )
 parser.add_argument(
-    "--batch_size", help="Batch size for one pass", type=int, default=72
+    "--batch_size", help="Batch size for one pass", type=int, default=8
 )
 parser.add_argument(
     "--dev", help="Use cpu or cuda", type=str, default="cuda"
 )
 parser.add_argument(
-    "--phase", help="train/val/test", type=str, default="train"
+    "--phase", help="train/test", type=str, default="train"
 )
 parser.add_argument(
     "--pt_file", type=str, default=None

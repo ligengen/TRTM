@@ -28,7 +28,9 @@ class ClothReconDataset(DatasetReader):
         # kp3d = self.kp3d[idx]
         # K = self.K[idx]
         # Load image
-        img = cv.imread(img_path, cv.IMREAD_GRAYSCALE)
+        # img = cv.imread(img_path, cv.IMREAD_GRAYSCALE)
+        img = cv.imread(img_path)
+        # img = np.expand_dims(img, axis=2)
         verts = np.loadtxt(verts_path)
 
         return {"image": img, "verts": verts}

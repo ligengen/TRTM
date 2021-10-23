@@ -18,8 +18,8 @@ class MainModel(nn.Module):
 
     def forward(self, batch):
         # Feed through backend model
-        output = self.backend_model(batch["image"])
+        output = self.backend_model(batch)
         # Adjust shape of output
-        output["kp3d"] = output["kp3d"].view(-1, 21, 3)
+        output["verts"] = output["verts"].view(-1, 2601, 3)
 
         return output

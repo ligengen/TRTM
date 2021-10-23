@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 Depth_map/*
 50.zip
+experiments/
 
 # C extensions
 *.so

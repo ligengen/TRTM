@@ -13,7 +13,7 @@ from src.utils.utils import kp3d_to_kp2d
 class NumpyToPytorch:
     def __call__(self, sample):
         # Torch take C x H x W whereas np,cv use H x W x C
-        # img = sample["image"].transpose(2, 0, 1)
+        img = sample["image"].transpose(2, 0, 1)
         # For single channel img, should transpose or leave it alone?
         # TODO
         # Convert to float and map to [0,1]
@@ -35,7 +35,7 @@ class Resize:
 
     def __call__(self, sample):
         sample["image"] = cv.resize(sample["image"], self.img_size)
-
+        # sample['image'] = np.expand_dims(sample['image'], 2)
         return sample
 
 
@@ -79,8 +79,8 @@ class Augmentation:
         # kp3d = np.einsum('ij,kj->ki', rot_mat, kp3d)
         # sample['kp3d'] = kp3d
 
-        verts = sample['verts']        
-        verts = np.einsum('ij,kj->ki', rot_mat, verts) 
+        verts = sample['verts']
+        verts = np.einsum('ij,kj->ki', rot_mat, verts)
         sample['verts'] = verts
 
         # how to deal with kp2d? 2d loss? how to render the image?

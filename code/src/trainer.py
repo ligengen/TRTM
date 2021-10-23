@@ -61,35 +61,39 @@ class Trainer:
             self.send_to_device(batch)
 
             gt_vertices = batch['verts']
+            # TODO 1300th dim to zero!
+            gt_root = gt_vertices[:, 1300, :]
+            gt_vertices = gt_vertices - gt_root[:, None, :]
 
             # Forward pass
-            pred_vertices = model(batch['image'])
+            output = model(batch['image'])
+            pred_vertices = output['verts']
 
-            if phase == 'train':
-                # compute 3d vertex loss
-                loss_vertices = self.vertices_loss(pred_vertices, gt_vertices)
-                loss = loss_vertices
-                batch_size = batch['image'].shape[0]
-                self.log_loss_vertices.update(loss_vertices.item(), batch_size)
-                self.log_losses.update(loss.item(), batch_size)
+            # compute 3d vertex loss
+            loss_vertices = self.vertices_loss(pred_vertices, gt_vertices)
+            loss = loss_vertices
+            batch_size = batch['image'].shape[0]
+            self.log_loss_vertices.update(loss_vertices.item(), batch_size)
+            self.log_losses.update(loss.item(), batch_size)
 
+            if loss.requires_grad:
                 # Backward pass, compute the gradients
                 loss.backward()
                 opt.step()
                 self.adjust_learning_rate(opt, epoch)
 
-                if (it % self.print_freq) == 0 or it == len(data_loader)-1:
-                    str_print = ""
-                    if epoch is not None:
-                        str_print += f"Epoch: {epoch:03d}\t"
-                    str_print += f"Iter: {it:04d}/{len(data_loader):04d}  "
-                    str_print += f"loss: {self.log_losses.avg:.10f}  "
-                    str_print += f" V loss: {self.log_loss_vertices.avg:.10f}  "
-                    str_print += f"lr: {opt.param_groups[0]['lr']:.6f}  "
-                    self.logger.info(str_print)
+            if (it % self.print_freq) == 0 or it == len(data_loader)-1:
+                str_print = ""
+                if epoch is not None:
+                    str_print += f"Epoch: {epoch:03d}\t"
+                str_print += f"Iter: {it:04d}/{len(data_loader):04d}  "
+                str_print += f"loss: {self.log_losses.avg:.10f}  "
+                str_print += f" V loss: {self.log_loss_vertices.avg:.10f}  "
+                str_print += f"lr: {opt.param_groups[0]['lr']:.6f}  "
+                self.logger.info(str_print)
 
 
-        if phase == 'train' and it == len(data_loader)-1:
+        if it == len(data_loader)-1:
             self.logger.info(f"***** Epoch {epoch:03d} mean loss: {self.log_losses.avg:.10f} *****\t")
 
         return self.log_losses.avg # , preds_storage, preds_storage_reg
@@ -114,7 +118,7 @@ class Trainer:
             # Train one epoch
             self.model.train()
             self.logger.info("##### TRAINING #####")
-            self.one_pass(self.data_loader_train, phase="train", epoch=e)
+            loss_tot = self.one_pass(self.data_loader_train, phase="train", epoch=e)
             # Evaluate on validation set
             with torch.no_grad():
                 self.model.eval()
@@ -127,14 +131,26 @@ class Trainer:
 
             if (e % self.save_freq) == 0:
                 torch.save(
-                    self.model.state_dict(),
+                    {
+                        'epoch': e,
+                        'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': self.opt.state_dict(),
+                    },
                     os.path.join(self.exp_dir, f"model_{e:04d}_{loss:.10f}.pt"),
                 )
             if not os.path.exists(os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt")):
-                torch.save(best_model_state, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
+                torch.save({
+                        'epoch': e,
+                        'model_state_dict': best_model_state,
+                        'optimizer_state_dict': self.opt.state_dict(),
+                        }, os.path.join(self.exp_dir, f"bestmodel_{e:04d}_{best_loss:.10f}.pt"))
 
-        torch.save(
-            self.model.state_dict(), os.path.join(self.exp_dir, f"model_last.pt")
+        torch.save({
+                'epoch': e,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.opt.state_dict(),
+            }
+            , os.path.join(self.exp_dir, f"model_last.pt")
         )
 
 
