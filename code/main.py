@@ -18,9 +18,9 @@ from src.utils.utils import add_logging
 
 main_seed = 0
 set_seed(main_seed)  # Seed main thread
-num_threads = 1
-data_dir = '/media/shaoliu/data/ligengen'
-save_dir = '/local/home/shaoliu/workspace/cloth_recon/experiments'
+num_threads = 8
+data_dir = '/cluster/home/tialiu/genli/50'
+save_dir = '/cluster/home/tialiu/genli/cloth_recon/experiments'
 ######## Set-up experimental directories
 if not os.path.isdir(save_dir):
     os.mkdir(save_dir)
@@ -31,10 +31,10 @@ parser.add_argument(
 )
 parser.add_argument("--lr", help="learning rate of optimizer", type=float, default=1e-4)
 parser.add_argument(
-    "--n_epochs", help="Number of training epochs", type=int, default=300
+    "--n_epochs", help="Number of training epochs", type=int, default=200
 )
 parser.add_argument(
-    "--batch_size", help="Batch size for one pass", type=int, default=8
+    "--batch_size", help="Batch size for one pass", type=int, default=256
 )
 parser.add_argument(
     "--dev", help="Use cpu or cuda", type=str, default="cuda"
@@ -43,7 +43,7 @@ parser.add_argument(
     "--phase", help="train/test", type=str, default="train"
 )
 parser.add_argument(
-    "--pt_file", type=str, default='/local/home/shaoliu/workspace/cloth_recon/experiments/exp_627806/model_0020_0.0208671260.pt'
+    "--pt_file", type=str, default='/cluster/home/tialiu/genli/cloth_recon/experiments/exp_170394/model_0020_0.0342486459.pt'
 )
 args = parser.parse_args()
 
