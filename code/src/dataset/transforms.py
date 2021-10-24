@@ -62,8 +62,8 @@ class Augmentation:
 
         depth_img = sample['image']
         # image roration
-        M = cv.getRotationMatrix2D([112, 112], self.rot, self.sc)
-        depth_img = cv.warpAffine(depth_img, M, (224, 224))
+        M = cv.getRotationMatrix2D([540, 540], self.rot, self.sc)
+        depth_img = cv.warpAffine(depth_img, M, (1080, 1080))
         # image noise
         depth_img[:,:,0] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,0]*self.pn[0]))
         depth_img[:,:,1] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,1]*self.pn[1]))
