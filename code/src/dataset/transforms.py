@@ -40,33 +40,34 @@ class Resize:
 
 
 class Augmentation:
-    def __init__(self, rot, sc, img_resolution):
+    # def __init__(self, rot, sc, img_resolution): this is for test time augmentation
+    def __init__(self):
         self.noise_factor = 0.4
         self.scale_factor = 0.25
         self.rot_factor = 90
-        self.pn = 1.
-        self.rot = rot
+        self.pn = np.ones(3) 
+        # self.rot = rot
         # self.sc = sc
-        self.sc = 1.0
-        self.resolution = img_resolution
 
     def __call__(self, sample):
-        if self.rot is None:
-            # self.sc = 1.0
-            self.pn = np.random.uniform(1-self.noise_factor, 1+self.noise_factor)
-            self.rot = min(2*self.rot_factor,
-                        max(-2*self.rot_factor, np.random.randn()*self.rot_factor))
-            # self.sc = min(1+self.scale_factor,
-            #             max(1-self.scale_factor, np.random.randn()*self.scale_factor+1))
-            if np.random.uniform() <= 0.6:
-                self.rot = 0
+        # if self.rot is None:
+        # self.sc = 1.0
+        self.pn = np.random.uniform(1-self.noise_factor, 1+self.noise_factor, 3)
+        self.rot = min(2*self.rot_factor,
+                    max(-2*self.rot_factor, np.random.randn()*self.rot_factor))
+        self.sc = min(1+self.scale_factor,
+                    max(1-self.scale_factor, np.random.randn()*self.scale_factor+1))
+        if np.random.uniform() <= 0.6:
+            self.rot = 0
 
         depth_img = sample['image']
         # image roration
-        M = cv.getRotationMatrix2D([self.resolution//2, self.resolution//2], self.rot, self.sc)
-        depth_img = cv.warpAffine(depth_img, M, (self.resolution, self.resolution))
+        M = cv.getRotationMatrix2D([112, 112], self.rot, self.sc)
+        depth_img = cv.warpAffine(depth_img, M, (224, 224))
         # image noise
-        depth_img = np.minimum(255.0, np.maximum(0.0, depth_img*self.pn))
+        depth_img[:,:,0] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,0]*self.pn[0]))
+        depth_img[:,:,1] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,1]*self.pn[1]))
+        depth_img[:,:,2] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,2]*self.pn[2]))
         sample['image'] = depth_img
 
         # kp3d = sample['kp3d']

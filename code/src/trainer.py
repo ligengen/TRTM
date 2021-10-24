@@ -6,6 +6,7 @@ import subprocess
 
 from src.utils.utils import pyt2np, AverageMeter
 import copy
+import numpy as np
 
 
 class Trainer:
@@ -16,7 +17,7 @@ class Trainer:
         scheduler,
         data_loader_train,
         data_loader_val,
-        # data_loader_test,
+        data_loader_test,
         exp_dir,
         dev,
         logger,
@@ -25,13 +26,13 @@ class Trainer:
 
         self.data_loader_train = data_loader_train
         self.data_loader_val = data_loader_val
-        # self.data_loader_test = data_loader_test
+        self.data_loader_test = data_loader_test
         self.model = model
         self.opt = optimizer
         self.scheduler = scheduler
         self.dev = dev
         self.print_freq = 100  # Update print frequency
-        self.save_freq = 20
+        self.save_freq = 100
         self.exp_dir = exp_dir
         self.num_train_epochs = n_epochs
         self.logger = logger
@@ -68,6 +69,9 @@ class Trainer:
             # Forward pass
             output = model(batch['image'])
             pred_vertices = output['verts']
+            
+            if preds_storage is not None:
+                preds_storage.append(pred_vertices)
 
             # compute 3d vertex loss
             loss_vertices = self.vertices_loss(pred_vertices, gt_vertices)
@@ -93,9 +97,11 @@ class Trainer:
                 self.logger.info(str_print)
 
 
-        if it == len(data_loader)-1:
+        if epoch is not None and it == len(data_loader)-1:
             self.logger.info(f"***** Epoch {epoch:03d} mean loss: {self.log_losses.avg:.10f} *****\t")
 
+        if preds_storage is not None:
+            return self.log_losses.avg, preds_storage
         return self.log_losses.avg # , preds_storage, preds_storage_reg
 
 
@@ -123,7 +129,7 @@ class Trainer:
             self.opt.load_state_dict(checkpoint['optimizer_state_dict'])
             epoch_start = checkpoint['epoch']
             print('>>>>>>>>>>>>>>> load state dict successfully <<<<<<<<<<<<<<<')
-        for e in range(epoch_start, self.num_train_epochs):
+        for e in range(epoch_start+1 if epoch_start != 0 else 0, self.num_train_epochs):
             self.logger.info(f"\nEpoch: {e+1:04d}/{self.num_train_epochs:04d}")
             # Train one epoch
             self.model.train()
@@ -163,24 +169,25 @@ class Trainer:
         )
 
 
-    '''def test_model(self):
+    def test_model(self, pt_file):
         """
         Runs model on testing data
         """
         print("##### TESTING #####")
-        # NOTE If you are saving the best performing model, you may want to first load
-        # the its weights before running test
+        checkpoint = torch.load(pt_file) 
+        self.model.load_state_dict(checkpoint['model_state_dict'])
         with torch.no_grad():
-            _, preds_storage = self.one_pass(
+            self.model.eval()
+            loss_tot, preds_storage = self.one_pass(
                 self.data_loader_test, phase="test", preds_storage=[]
             )
+  
+        print('total loss: ', loss_tot)
 
         preds = pyt2np(torch.cat(preds_storage, dim=0)).tolist()
 
-        test_path = os.path.join(self.exp_dir, "test_preds.json")
-        print(f"Dumping test predictions in {test_path}")
-        with open(test_path, "w") as f:
-            json.dump(preds, f)
-        subprocess.call(['gzip', test_path])'''
-
+        if not os.path.exists('/cluster/home/tialiu/genli/50/pred'):
+            os.mkdir('/cluster/home/tialiu/genli/50/pred')
+        for idx, pred in enumerate(preds):
+            np.savetxt('/cluster/home/tialiu/genli/50/pred/%05d_pred.txt'%idx, pred)
 

@@ -34,7 +34,7 @@ parser.add_argument(
     "--n_epochs", help="Number of training epochs", type=int, default=200
 )
 parser.add_argument(
-    "--batch_size", help="Batch size for one pass", type=int, default=256
+    "--batch_size", help="Batch size for one pass", type=int, default=128
 )
 parser.add_argument(
     "--dev", help="Use cpu or cuda", type=str, default="cuda"
@@ -43,7 +43,7 @@ parser.add_argument(
     "--phase", help="train/test", type=str, default="train"
 )
 parser.add_argument(
-    "--pt_file", type=str, default='/cluster/home/tialiu/genli/cloth_recon/experiments/exp_170394/model_0020_0.0342486459.pt'
+    "--pt_file", type=str, default=''
 )
 args = parser.parse_args()
 
@@ -52,7 +52,7 @@ pt_file = args.pt_file
 pt_name = ''
 if args.phase == 'train':
     unique_id = str(datetime.datetime.now().microsecond)
-    exp_dir = os.path.join(save_dir, f"exp_{unique_id}")
+    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}")
     # If this fails, there was an ID clash. Hence its preferable to crash than overwrite
     os.mkdir(exp_dir)
     # file = open(os.path.join(exp_dir, 'out.txt'), 'w+')
@@ -85,7 +85,7 @@ scheduler = lrs.StepLR(opt, step_size=100, gamma=0.1)
 transformation_cfg = edict(
     {
         # TODO!
-        # "Augmentation": {},
+        "Augmentation": {},
         "Resize": {"img_size": (224, 224)},
         "NumpyToPytorch": {},
         # "Normalize": {}
@@ -110,6 +110,9 @@ data_reader_train = data_factory.get_data_reader(
 data_reader_val = data_factory.get_data_reader(
     data_cfg, split="val", data_transforms=transformations_eval
 )
+data_reader_test = data_factory.get_data_reader(
+    data_cfg, split='test', data_transforms=transformations_eval
+)
 
 data_loader_train = DataLoader(
     data_reader_train,
@@ -131,6 +134,15 @@ data_loader_val = DataLoader(
     pin_memory=True,  # Faster data transfer to GPU
     worker_init_fn=lambda x: worker_init(x, main_seed),
 )
+data_loader_test = DataLoader(
+    data_reader_test,
+    batch_size=args.batch_size,
+    shuffle=False,  # Go through the test data sequentially. Easier to plot same samples to observe them over time
+    num_workers=num_threads,  # Number of worker threads batching data
+    drop_last=False,  # We want to validate on ALL data
+    pin_memory=True,  # Faster data transfer to GPU
+    worker_init_fn=lambda x: worker_init(x, main_seed),
+)
 
 ######### Set-up trainer and run training
 trainer = Trainer(
@@ -139,6 +151,7 @@ trainer = Trainer(
     scheduler,
     data_loader_train,
     data_loader_val,
+    data_loader_test,
     exp_dir,
     dev,
     logger,
@@ -148,3 +161,10 @@ if args.phase == 'train':
     trainer.train_model(pt_file)
     # pt_file = os.path.join(exp_dir, 'model_last.pt')
     # trainer.test_model(pt_file)
+
+if args.phase == 'test':
+    if pt_file == '':
+        import pdb
+        pdb.set_trace()
+    trainer.test_model(pt_file)
+

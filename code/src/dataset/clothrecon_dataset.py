@@ -40,5 +40,7 @@ class ClothReconDataset(DatasetReader):
             return 3605
         elif self.split == 'train':
             return 8412
+        elif self.split == 'test':
+            return 4303
         else:
             raise NotImplementedError("ERROR in dataset split")
