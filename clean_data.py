@@ -55,4 +55,7 @@ def train_val_split():
 
 if __name__ == '__main__':
     # rename()
-    train_val_split()
+    # train_val_split()
+    for i in range(4303):
+        os.rename('/Users/ligen/Desktop/cloth_recon/Depth_map/50/%05d.txt' % i, '/Users/ligen/Desktop/cloth_recon/Depth_map/50/test/%05d.txt'%i)
+    #     os.rename('/Users/ligen/Desktop/cloth_recon/Depth_map/50/%05d.png' % i, '/Users/ligen/Desktop/cloth_recon/Depth_map/50/test/%05d.png'%i)
