@@ -15,3 +15,7 @@ def get_data_reader(data_cfg, split, data_transforms):
     else:
         # We have multiple datasets
         return ConcatDataset(l_dataset)
+
+def get_data_reader_image_loss(bz, trans):
+    from src.dataset.rendered_images import RenderedImg
+    return RenderedImg(bz, trans)

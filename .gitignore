@@ -5,6 +5,8 @@ __pycache__/
 Depth_map/*
 50.zip
 experiments/
+tmp/
+*.swp
 
 # C extensions
 *.so

@@ -10,6 +10,15 @@ from src.utils.utils import kp3d_to_kp2d
 # TODO: add kp3d and kp2d!
 
 
+class NpToPytSingleChannel:
+    def __call__(self, sample):
+        sample['gt_img'] = sample['gt_img'].astype(np.float32) / 255
+        sample['pred_img'] = sample['pred_img'].astype(np.float32) / 255
+        for k, v in sample.items():
+            sample[k] = torch.from_numpy(v).float()
+        return sample
+
+
 class NumpyToPytorch:
     def __call__(self, sample):
         # Torch take C x H x W whereas np,cv use H x W x C
@@ -53,6 +62,7 @@ class Augmentation:
         # if self.rot is None:
         # self.sc = 1.0
         self.pn = np.random.uniform(1-self.noise_factor, 1+self.noise_factor, 3)
+        # self.pn = np.random.uniform(1-self.noise_factor, 1+self.noise_factor)
         self.rot = min(2*self.rot_factor,
                     max(-2*self.rot_factor, np.random.randn()*self.rot_factor))
         self.sc = min(1+self.scale_factor,
@@ -66,14 +76,17 @@ class Augmentation:
         depth_img = cv.warpAffine(depth_img, M, (1080, 1080))
         # image noise
         depth_img[:,:,0] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,0]*self.pn[0]))
+        # depth_img[:,:,0] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,0]*self.pn))
         depth_img[:,:,1] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,1]*self.pn[1]))
+        # depth_img[:,:,1] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,1]*self.pn))
         depth_img[:,:,2] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,2]*self.pn[2]))
+        # depth_img[:,:,2] = np.minimum(255.0, np.maximum(0.0, depth_img[:,:,2]*self.pn))
         sample['image'] = depth_img
 
         # kp3d = sample['kp3d']
         rot_mat = np.eye(3)
         if not self.rot == 0:
-            rot_rad = -self.rot * np.pi / 180
+            rot_rad = self.rot * np.pi / 180
             sn, cs = np.sin(rot_rad), np.cos(rot_rad)
             rot_mat[0,:2] = [cs, -sn]
             rot_mat[1,:2] = [sn, cs]
@@ -85,7 +98,6 @@ class Augmentation:
         sample['verts'] = verts
 
         # how to deal with kp2d? 2d loss? how to render the image?
-
         return sample
 
 

@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
 import torch.optim as optim
-import torch.optim.lr_scheduler as lrs
+import shutil
 
 from src.models import model_factory
 from src.dataset import transforms_factory, data_factory
@@ -19,9 +19,11 @@ from src.utils.utils import add_logging
 main_seed = 0
 set_seed(main_seed)  # Seed main thread
 num_threads = 8
-data_dir = '/cluster/home/tialiu/genli/50'
-save_dir = '/cluster/home/tialiu/genli/cloth_recon/experiments'
+data_dir = '/home/crl-5/Desktop/50'
+save_dir = '/home/crl-5/Desktop/cloth_recon/experiments'
 ######## Set-up experimental directories
+if os.path.exists('/home/crl-5/Desktop/cloth_recon/tmp'):
+    shutil.rmtree('/home/crl-5/Desktop/cloth_recon/tmp')
 if not os.path.isdir(save_dir):
     os.mkdir(save_dir)
 
@@ -31,10 +33,10 @@ parser.add_argument(
 )
 parser.add_argument("--lr", help="learning rate of optimizer", type=float, default=1e-4)
 parser.add_argument(
-    "--n_epochs", help="Number of training epochs", type=int, default=200
+    "--n_epochs", help="Number of training epochs", type=int, default=500
 )
 parser.add_argument(
-    "--batch_size", help="Batch size for one pass", type=int, default=128
+    "--batch_size", help="Batch size for one pass", type=int, default=96
 )
 parser.add_argument(
     "--dev", help="Use cpu or cuda", type=str, default="cuda"
@@ -52,7 +54,7 @@ pt_file = args.pt_file
 pt_name = ''
 if args.phase == 'train':
     unique_id = str(datetime.datetime.now().microsecond)
-    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}")
+    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}_addrenderloss")
     # If this fails, there was an ID clash. Hence its preferable to crash than overwrite
     os.mkdir(exp_dir)
     # file = open(os.path.join(exp_dir, 'out.txt'), 'w+')
@@ -80,12 +82,11 @@ dev = torch.device(args.dev)
 model = model_factory.get_model(model_cfg, dev, logger)
 ######### Set-up optimizer
 opt = optim.Adam(model.parameters(), lr=args.lr)
-scheduler = lrs.StepLR(opt, step_size=100, gamma=0.1)
 ######### Set-up data transformation
 transformation_cfg = edict(
     {
         # TODO!
-        "Augmentation": {},
+        # "Augmentation": {},
         "Resize": {"img_size": (224, 224)},
         "NumpyToPytorch": {},
         # "Normalize": {}
@@ -100,7 +101,9 @@ transformation_cfg_eval = edict(
         # "Normalize": {}
     }
 )
+transformation_cfg_il = edict({'NpToPytSingleChannel': {}})
 transformations_eval = transforms_factory.get_transforms(transformation_cfg_eval)
+transformations_il = transforms_factory.get_transforms(transformation_cfg_il)
 
 ######### Set-up data reader and data loader
 data_cfg = edict({"ClothRecon": {"dataset_path": data_dir}})
@@ -113,6 +116,7 @@ data_reader_val = data_factory.get_data_reader(
 data_reader_test = data_factory.get_data_reader(
     data_cfg, split='test', data_transforms=transformations_eval
 )
+data_reader_image_loss = data_factory.get_data_reader_image_loss(args.batch_size, transformations_il)
 
 data_loader_train = DataLoader(
     data_reader_train,
@@ -143,15 +147,24 @@ data_loader_test = DataLoader(
     pin_memory=True,  # Faster data transfer to GPU
     worker_init_fn=lambda x: worker_init(x, main_seed),
 )
+data_loader_image_loss = DataLoader(
+    data_reader_image_loss,
+    batch_size=args.batch_size,
+    shuffle=False,
+    num_workers=num_threads,
+    drop_last=False,
+    pin_memory=True,
+    worker_init_fn=lambda x: worker_init(x, main_seed),
+)
 
 ######### Set-up trainer and run training
 trainer = Trainer(
     model,
     opt,
-    scheduler,
     data_loader_train,
     data_loader_val,
     data_loader_test,
+    data_loader_image_loss,
     exp_dir,
     dev,
     logger,
