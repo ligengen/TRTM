@@ -1,6 +1,6 @@
 import os
 import cv2 as cv
-
+import glob
 import numpy as np
 
 from src.dataset.dataset_reader import DatasetReader
@@ -21,4 +21,5 @@ class RenderedImg(DatasetReader):
         return {"gt_img": gt_img, "pred_img": pred_img}
 
     def __len__(self):
-        return self.bz
+        x = len(glob.glob(self.dataset_path + '/*.png'))
+        return x//2
