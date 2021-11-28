@@ -14,12 +14,18 @@ class MainModel(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         # NOTE You can try different backend models here
-        self.backend_model = model_factory.get_model(cfg.backend)
+        self.backbone_model = model_factory.get_model(cfg.backend)
+        # self.backend_model = model_factory.get_model(cfg.backend)
+        self.cloth_model = model_factory.get_model(cfg.cloth_model)
+        # self.graphcnn = model_factory.get_model(cfg.graph_cnn)
 
-    def forward(self, batch):
-        # Feed through backend model
-        output = self.backend_model(batch)
+    def forward(self, batch, is_training, read_intermediate, offset):
+        image_feature = self.backbone_model(batch)
+        # output = self.backend_model(batch)
+        node_pred = self.cloth_model(image_feature, is_training, read_intermediate, offset)
+        # node_pred = self.graphcnn(batch)
         # Adjust shape of output
-        output["verts"] = output["verts"].view(-1, 2601, 3)
-
-        return output
+        # output["verts"] = output["verts"].view(-1, 2601, 3)
+        # return image_feature.view(-1, 2601, 3)
+        # return output['verts']
+        return node_pred

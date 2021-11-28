@@ -2,7 +2,8 @@ import torch
 
 from src.models import torchvision_model_wrapper
 from src.models import main_model
-
+from src.models import cloth_model
+from src.models import graph_cnn
 
 def get_model(cfg_model, dev=None, logger=None, is_eval=None, ckpt=None):
     model_name = cfg_model.name.lower()
@@ -18,6 +19,10 @@ def get_model(cfg_model, dev=None, logger=None, is_eval=None, ckpt=None):
     elif model_name in torchvision_model_wrapper.model_list():
         # ResNet
         model = torchvision_model_wrapper.get_model(cfg_model)
+    elif model_name == 'cloth_model':
+        model = cloth_model.Model()
+    elif model_name == 'graph_cnn':
+        model = graph_cnn.GraphCNN()
     else:
         # NOTE You may want to test other model types which are not supported by resnet_wrapper
         raise Exception(f"Unsupported model {model_name}")

@@ -29,14 +29,14 @@ if not os.path.isdir(save_dir):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--backend", help="backend network", type=str, default="resnet50"
+    "--backend", help="backend network", type=str, default="resnet34"
 )
 parser.add_argument("--lr", help="learning rate of optimizer", type=float, default=1e-4)
 parser.add_argument(
-    "--n_epochs", help="Number of training epochs", type=int, default=500
+    "--n_epochs", help="Number of training epochs", type=int, default=200
 )
 parser.add_argument(
-    "--batch_size", help="Batch size for one pass", type=int, default=96
+    "--batch_size", help="Batch size for one pass", type=int, default=8
 )
 parser.add_argument(
     "--dev", help="Use cpu or cuda", type=str, default="cuda"
@@ -47,6 +47,18 @@ parser.add_argument(
 parser.add_argument(
     "--pt_file", type=str, default=''
 )
+parser.add_argument(
+    '--scheduler_step', type=int, default=100
+)
+parser.add_argument(
+    '--use_pretrained', type=bool, default=False
+)
+parser.add_argument(
+    '--read_intermediate', type=bool, default=False
+)
+parser.add_argument(
+    '--show_offset', type=bool, default=False
+)
 args = parser.parse_args()
 
 
@@ -54,7 +66,7 @@ pt_file = args.pt_file
 pt_name = ''
 if args.phase == 'train':
     unique_id = str(datetime.datetime.now().microsecond)
-    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}_addrenderloss")
+    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}_edge_no_image_feature_solve_selfintersec")
     # If this fails, there was an ID clash. Hence its preferable to crash than overwrite
     os.mkdir(exp_dir)
     # file = open(os.path.join(exp_dir, 'out.txt'), 'w+')
@@ -64,7 +76,7 @@ else:
     pt_name = args.pt_file.split('/')[-1][:-3]
     exp_dir = os.path.join(save_dir, exp_name)
 
-logger = add_logging("clothrecon", os.path.join(save_dir,'log.txt'))
+logger = add_logging("clothrecon", os.path.join(exp_dir,'log.txt'))
 
 ######### Set-up model
 model_cfg = edict(
@@ -72,10 +84,17 @@ model_cfg = edict(
         "name": "main_model",
         "backend": {
             "name": args.backend,  # Defines the backend model type
+            'use_pretrained': args.use_pretrained,
             "output_slices": {
-                "verts": 2601 * 3
+                "verts": 2601*3 #deprecated
             },  # Defines the outputs and their dimensionality
         },
+        "cloth_model": {
+            "name": "cloth_model",
+        },
+        # "graph_cnn": {
+        #     "name": "graph_cnn",
+        # }
     }
 )
 dev = torch.device(args.dev)
@@ -101,9 +120,9 @@ transformation_cfg_eval = edict(
         # "Normalize": {}
     }
 )
-transformation_cfg_il = edict({'NpToPytSingleChannel': {}})
+# transformation_cfg_il = edict({'NpToPytSingleChannel': {}})
 transformations_eval = transforms_factory.get_transforms(transformation_cfg_eval)
-transformations_il = transforms_factory.get_transforms(transformation_cfg_il)
+# transformations_il = transforms_factory.get_transforms(transformation_cfg_il)
 
 ######### Set-up data reader and data loader
 data_cfg = edict({"ClothRecon": {"dataset_path": data_dir}})
@@ -116,7 +135,7 @@ data_reader_val = data_factory.get_data_reader(
 data_reader_test = data_factory.get_data_reader(
     data_cfg, split='test', data_transforms=transformations_eval
 )
-data_reader_image_loss = data_factory.get_data_reader_image_loss(args.batch_size, transformations_il)
+# data_reader_image_loss = data_factory.get_data_reader_image_loss(args.batch_size, transformations_il)
 
 data_loader_train = DataLoader(
     data_reader_train,
@@ -147,15 +166,15 @@ data_loader_test = DataLoader(
     pin_memory=True,  # Faster data transfer to GPU
     worker_init_fn=lambda x: worker_init(x, main_seed),
 )
-data_loader_image_loss = DataLoader(
-    data_reader_image_loss,
-    batch_size=args.batch_size,
-    shuffle=False,
-    num_workers=num_threads,
-    drop_last=False,
-    pin_memory=True,
-    worker_init_fn=lambda x: worker_init(x, main_seed),
-)
+# data_loader_image_loss = DataLoader(
+#     data_reader_image_loss,
+#     batch_size=args.batch_size,
+#     shuffle=False,
+#     num_workers=num_threads,
+#     drop_last=False,
+#     pin_memory=True,
+#     worker_init_fn=lambda x: worker_init(x, main_seed),
+# )
 
 ######### Set-up trainer and run training
 trainer = Trainer(
@@ -164,11 +183,14 @@ trainer = Trainer(
     data_loader_train,
     data_loader_val,
     data_loader_test,
-    data_loader_image_loss,
+    # data_loader_image_loss,
     exp_dir,
     dev,
     logger,
-    args.n_epochs
+    args.n_epochs,
+    args.scheduler_step,
+    args.read_intermediate,
+    args.show_offset
 )
 if args.phase == 'train':
     trainer.train_model(pt_file)

@@ -8,6 +8,7 @@ from itertools import accumulate
 
 
 def model_list():
+    # NOTE You can add other model types found in the torchvision library
     model_list = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"]
     return model_list
 
@@ -19,6 +20,7 @@ class ResNetWrapper(nn.Module):
     """
 
     def __init__(self, model_name, output_slices):
+    # def __init__(self, model_name):
         super().__init__()
 
         # Use a resnet-style backend
@@ -45,7 +47,7 @@ class ResNetWrapper(nn.Module):
         # NOTE You may want to look at the arguments of the resnet constructor
         # to test out various things:
         # https://pytorch.org/vision/stable/_modules/torchvision/models/resnet.html
-        b_model = model_func(pretrained=True)
+        b_model = model_func()
         encoder = nn.Sequential(
             b_model.conv1,
             b_model.bn1,
@@ -63,21 +65,22 @@ class ResNetWrapper(nn.Module):
         final_layer = nn.Sequential(nn.Linear(feat_dim, output_dim))
 
         self.encoder = encoder
-        self.final_layer = final_layer
-        self.output_idx = output_idx
+        # self.final_layer = final_layer
+        # self.output_idx = output_idx
 
     def forward(self, x):
         # Get feature output
         f = self.encoder(x)
         # Get final output
         f = f.flatten(start_dim=1)
-        out = self.final_layer(f)
+        # out = self.final_layer(f)
         # Slice the output
-        out_dict = {}
-        for key, start_idx, to_idx in self.output_idx:
-            out_dict[key] = out[..., start_idx:to_idx]
+        # out_dict = {}
+        # for key, start_idx, to_idx in self.output_idx:
+        #     out_dict[key] = out[..., start_idx:to_idx]
 
-        return out_dict
+        # return out_dict
+        return f
 
 
 def get_model(cfg_model):
@@ -86,3 +89,4 @@ def get_model(cfg_model):
     )
 
     return model
+
