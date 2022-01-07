@@ -1,9 +1,7 @@
 import torch
 from torch import nn
-from src.models import encode_process_decode_without_edge_image as encode_process_decode
-# from src.models import encode_process_decode
+from src.models import gat
 import torch.nn.functional as F
-from src.utils import normalization
 import numpy as np
 import pdb
 
@@ -13,12 +11,8 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.template_mesh_verts = np.loadtxt('/home/crl-5/Desktop/cloth_recon/flat_state_050.txt')
         self.edge_idx = np.loadtxt('/home/crl-5/Desktop/cloth_recon/mesh_edge_idx.txt').astype(int)
-        # TODO: add normalizer!
-        # self._node_normalizer = normalization.Normalizer(size=4, name='node_normalizer')
-        # self._edge_normalizer = normalization.Normalizer(size=4, name='edge_normalizer')
-        # self._image_normalizer = normalization.Normalizer(size=2048, name='image_normalizer')
         self.message_passing_steps = message_passing_steps
-        self.learned_model = encode_process_decode.EncodeProcessDecode(
+        self.learned_model = gat.GAT(
                 output_size=3, #TODO: graph_feat or node_pred?
                 latent_size=128, #128
                 num_layers=2,
@@ -57,23 +51,21 @@ class Model(nn.Module):
         # receiver = torch.unsqueeze(receiver, 0).expand(batch_size, -1, -1)
         # sender = torch.unsqueeze(sender, 0).expand(batch_size, -1, -1)
 
-        mesh_edges = encode_process_decode.EdgeSet(
+        mesh_edges = gat.EdgeSet(
             name='mesh_edges',
-            # features=self._edge_normalizer(edge_features, is_training),
             features=edge_features,
             receivers=receiver,
             senders=sender)
 
 
-        # return encode_process_decode.MultiGraph(node_features=self._node_normalizer(node_features, is_training), edge_sets=[mesh_edges])
-        return encode_process_decode.MultiGraph(node_features=node_features, edge_sets=[mesh_edges])
+        return gat.MultiGraph(node_features=node_features, edge_sets=[mesh_edges])
 
-    def forward(self, image_feature, is_training, read_intermediate, offset):
+    def forward(self, image_feature, is_training, read_intermediate, vis_att):
         # batch_size = image_feature.shape[0]
         # generate T-pose template mesh
         self.graph = self._build_graph(is_training)
 
-        node_pred = self.learned_model(self.graph, image_feature, read_intermediate, offset)
+        node_pred = self.learned_model(self.graph, image_feature, read_intermediate, vis_att)
         # feature = torch.cat((image_feat, node_pred), -1)
         return node_pred
 

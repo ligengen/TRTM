@@ -19,6 +19,8 @@ from src.utils.utils import add_logging
 main_seed = 0
 set_seed(main_seed)  # Seed main thread
 num_threads = 8
+# all_data
+# data_dir = '/home/crl-5/Desktop/dataset'
 data_dir = '/home/crl-5/Desktop/50'
 save_dir = '/home/crl-5/Desktop/cloth_recon/experiments'
 ######## Set-up experimental directories
@@ -57,7 +59,7 @@ parser.add_argument(
     '--read_intermediate', type=bool, default=False
 )
 parser.add_argument(
-    '--show_offset', type=bool, default=False
+    '--show_attention', type=bool, default=False
 )
 args = parser.parse_args()
 
@@ -66,7 +68,7 @@ pt_file = args.pt_file
 pt_name = ''
 if args.phase == 'train':
     unique_id = str(datetime.datetime.now().microsecond)
-    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}_edge_no_image_feature_solve_selfintersec")
+    exp_dir = os.path.join(save_dir, f"exp_{unique_id}_{args.backend}_mlp_baseline")
     # If this fails, there was an ID clash. Hence its preferable to crash than overwrite
     os.mkdir(exp_dir)
     # file = open(os.path.join(exp_dir, 'out.txt'), 'w+')
@@ -190,7 +192,7 @@ trainer = Trainer(
     args.n_epochs,
     args.scheduler_step,
     args.read_intermediate,
-    args.show_offset
+    args.show_attention
 )
 if args.phase == 'train':
     trainer.train_model(pt_file)

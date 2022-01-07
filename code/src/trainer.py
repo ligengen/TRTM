@@ -10,8 +10,8 @@ import numpy as np
 from multiprocessing import Pool
 # from functools import partial
 import cv2
-import trimesh
-from mesh_intersection.bvh_search_tree import BVH
+# import trimesh
+# from mesh_intersection.bvh_search_tree import BVH
 import pdb
 
 device = torch.device('cuda')
@@ -31,7 +31,7 @@ class Trainer:
         n_epochs,
         scheduler_step,
         read_intermediate,
-        offset,
+        attention,
     ):
 
         self.data_loader_train = data_loader_train
@@ -58,8 +58,8 @@ class Trainer:
         self.blender_path = '/home/crl-5/Desktop/blender-2.93.5-linux-x64/blender'
         self.edge_idx = torch.from_numpy(np.loadtxt('/home/crl-5/Desktop/cloth_recon/mesh_edge_idx.txt').astype(int)[:5100]).to(torch.int64).cuda()
         self.read_intermediate = read_intermediate
-        self.offset = offset
-        self.m = BVH(max_collisions=8)
+        self.attention = attention
+        # self.m = BVH(max_collisions=8)
 
     def vertices_loss(self, pred_vertices, gt_vertices):
         return self.criterion_vertices(pred_vertices, gt_vertices)
@@ -97,20 +97,21 @@ class Trainer:
                 is_training = True
             else:
                 is_training = False
-            output = model(batch['image'], is_training, self.read_intermediate, self.offset)
+            output = model(batch['image'], is_training, self.read_intermediate, self.attention)
             if not self.read_intermediate:
-                if not self.offset:
+                if not self.attention:
                     pred_vertices = output
                 else:
-                    pred_vertices, offset_list = output
+                    pred_vertices, attention_list = output
             else:
                 pred_vertices = output[-1]
             # pred_vertices = output['verts']
             
             
-            '''
+            
             # image loss
             # TODO how to send nparr to another script? subprocess complains the arr string/bstr is embedded null type...
+            '''
             basedir = '/home/crl-5/Desktop/cloth_recon/tmp/'
             if not os.path.exists(basedir):
                 os.mkdir(basedir)
@@ -147,11 +148,12 @@ class Trainer:
                 triangles = torch.tensor(triangles, dtype=torch.float32, device=device).unsqueeze(dim=0)
                 torch.cuda.synchronize()
                 outputs = self.m(triangles)
-                torch.cuda.synchronize()
+                pdb.set_trace()
                 outputs = outputs.detach().cpu().numpy().squeeze()
                 collisions = outputs[outputs[:, 0] >= 0, :]
                 ratio = collisions.shape[0] / float(triangles.shape[1])
                 intersec_loss += ratio
+                torch.cuda.synchronize()
 
             # gt_imgs = []
             # pred_imgs = []
@@ -173,11 +175,11 @@ class Trainer:
             if preds_storage is not None:
                 if not self.read_intermediate:
                     preds_storage.append(pred_vertices)
-                    if self.offset:
+                    if self.attention:
                         if it == 0:
-                            offset_storage = [[] for i in range(len(offset_list))]
-                        for i in range(len(offset_list)):
-                            offset_storage[i].append(offset_list[i])
+                            attention_storage = [[] for i in range(len(attention_list))]
+                        for i in range(len(attention_list)):
+                            attention_storage[i].append(attention_list[i])
                 else:
                     if it == 0:
                         preds_storage = [[] for i in range(len(output))]
@@ -229,8 +231,8 @@ class Trainer:
         if epoch is not None and it == len(data_loader)-1:
             self.logger.info(f"***** Epoch {epoch:03d} mean loss: {self.log_losses.avg:.10f} *****\t")
 
-        if self.offset:
-            return self.log_losses.avg, preds_storage, offset_storage
+        if self.attention:
+            return self.log_losses.avg, preds_storage, attention_storage
         if preds_storage is not None:
             return self.log_losses.avg, preds_storage
         return self.log_losses.avg # , preds_storage, preds_storage_reg
@@ -309,12 +311,12 @@ class Trainer:
         self.model.load_state_dict(checkpoint['model_state_dict'])
         with torch.no_grad():
             self.model.eval()
-            if not self.offset:
+            if not self.attention:
                 loss_tot, preds_storage = self.one_pass(
                     self.data_loader_test, phase="test", preds_storage=[]
                 )
             else:
-                loss_tot, preds_storage, offset_storage = self.one_pass(self.data_loader_test, phase='test', preds_storage=[])
+                loss_tot, preds_storage, attention_storage = self.one_pass(self.data_loader_test, phase='test', preds_storage=[])
   
         print('total loss: ', loss_tot)
 
@@ -326,11 +328,11 @@ class Trainer:
             preds = pyt2np(torch.cat(preds_storage, dim=0)).tolist()
             for idx, pred in enumerate(preds):
                 np.savetxt('/home/crl-5/Desktop/50/pred/%05d_pred.txt'%idx, pred)
-            if self.offset:
-                for i in range(len(offset_storage)):
-                    offsets = pyt2np(torch.cat(offset_storage[i], dim=0)).tolist()
-                    for idx, offset in enumerate(offsets):
-                        np.savetxt('/home/crl-5/Desktop/50/pred/%05d_%02d_offset.txt' % (idx, i), offset)
+            if self.attention:
+                for i in range(len(attention_storage)):
+                    attentions = pyt2np(torch.cat(attention_storage[i], dim=0)).tolist()
+                    for idx, att in enumerate(attentions):
+                        np.savetxt('/home/crl-5/Desktop/50/pred/%05d_%02d_attention.txt' % (idx, i), att)
         else:
             for i in range(len(preds_storage)):
                 preds = pyt2np(torch.cat(preds_storage[i], dim=0)).tolist()
