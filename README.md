@@ -10,6 +10,19 @@ The idea of using template-based deformation to model the geometry estimation of
 
 Part of the code is adapted from the pytorch implementation of meshgraphnets from https://github.com/wwMark/meshgraphnets.
 
+## method overview
+![](img/overview.png)
+
+## deformation (message passing) visualization
+![](img/mp.png)
+
+## qualitative visualization
+![](img/qual.png)
+
+## data augmentation for occlusion
+![](img/occ.png)
+
+
 ## code for training a new model:
 ```
 python main.py
