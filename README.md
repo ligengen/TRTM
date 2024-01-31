@@ -14,7 +14,7 @@
 
 My semester project at ETH Zurich. This code repo **only** contains the code for the reconstruction part. The manipulation part is not done by me. 
 
-The code implementation might have some discrepancies with the ICRA 2024 paper, however, it is fully compatible with my semester project report.
+The code implementation might have some discrepancies with the ICRA 2024 paper, however, it is fully compatible with my semester project report. But the difference is negligible.
 
 This task is to reconstruct the geometry of a wrinkled garment/deformed cloth using a single-view depth simulated image.
 
