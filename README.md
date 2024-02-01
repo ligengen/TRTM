@@ -2,6 +2,8 @@
 
 ####  <p align="center"> [Wenbo Wang](), [Gen Li](https://vlg.inf.ethz.ch/team/Gen-Li.html), [Miguel Zamora](), [Stelian Coros](https://crl.ethz.ch/people/coros/index.html)</p>
 
+### <p align="center"> ICRA 2024
+
 ### <p align="center">[ArXiv](https://arxiv.org/abs/2308.04670) | [Project Page](https://wenbwa.github.io/TRTM/)
 
 <p align="center">
